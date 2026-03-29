@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Main_Project.Models;
 
@@ -19,6 +20,7 @@ public partial class Customer
 
     public string? Password { get; set; }
 
+    [NotMapped]
     public string? Code { get; set; }
 
     public virtual ICollection<BookingReservation> BookingReservations { get; set; } = new List<BookingReservation>();

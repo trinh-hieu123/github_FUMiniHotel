@@ -53,7 +53,7 @@ CREATE TABLE [dbo].[Customer](
 	[EmailAddress] [nvarchar](50) NOT NULL,
 	[CustomerBirthday] [date] NULL,
 	[CustomerStatus] [tinyint] NULL,
-	[Password] [nvarchar](50) NULL,
+	[Password] [nvarchar](255) NULL,
  CONSTRAINT [PK_Customer] PRIMARY KEY CLUSTERED 
 (
 	[CustomerID] ASC

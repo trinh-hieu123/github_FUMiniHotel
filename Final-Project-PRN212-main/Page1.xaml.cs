@@ -50,16 +50,17 @@ namespace Question2
                 else
                 {
                     MainWindow.INSTANCE.isAdmin = false;
-                    foreach (var customer in MainWindow.INSTANCE.context.Customers.ToList())
+                    var customer = MainWindow.INSTANCE.context.Customers
+                        .FirstOrDefault(c => c.CustomerStatus == 1 && c.EmailAddress == email);
+
+                    if (customer != null && VerifyPassword(password, customer.Password))
                     {
-                        if (BCrypt.Net.BCrypt.Verify(password, customer.Password)&&customer.CustomerStatus==1&&customer.EmailAddress==email)
-                        {
-                            MainWindow.INSTANCE._customer = customer;
-                            NavigationService.Navigate(new Page9());
-                            MessageBox.Show("Customer login successful!");
-                            return;
-                        }
+                        MainWindow.INSTANCE._customer = customer;
+                        NavigationService.Navigate(new Page9());
+                        MessageBox.Show("Customer login successful!");
+                        return;
                     }
+
                     MessageBox.Show("Invalid email or password.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 
@@ -68,6 +69,28 @@ namespace Question2
             {
                 MessageBox.Show("Please enter both email and password.");
             }
+        }
+
+        private static bool VerifyPassword(string inputPassword, string? storedPassword)
+        {
+            if (string.IsNullOrWhiteSpace(storedPassword))
+            {
+                return false;
+            }
+
+            if (storedPassword.StartsWith("$2"))
+            {
+                try
+                {
+                    return BCrypt.Net.BCrypt.Verify(inputPassword, storedPassword);
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            return inputPassword == storedPassword;
         }
 
         private void ButtonBase_OnClickRegister(object sender, RoutedEventArgs e)
