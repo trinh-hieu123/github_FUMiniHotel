@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
@@ -36,7 +38,75 @@ public partial class FuminiHotelManagementContext : DbContext
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         var config = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
-        if (!optionsBuilder.IsConfigured) { optionsBuilder.UseSqlServer(config.GetConnectionString("value")); }
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseSqlServer(ResolveWorkingConnectionString(config));
+        }
+    }
+
+    private static string ResolveWorkingConnectionString(IConfigurationRoot config)
+    {
+        var baseConnection = config.GetConnectionString("value")
+            ?? throw new InvalidOperationException("Missing ConnectionStrings:value in appsettings.json.");
+
+        var baseBuilder = new SqlConnectionStringBuilder(baseConnection)
+        {
+            ConnectTimeout = 2
+        };
+
+        var databaseName = baseBuilder.InitialCatalog;
+        if (string.IsNullOrWhiteSpace(databaseName))
+        {
+            throw new InvalidOperationException("ConnectionStrings:value must include Initial Catalog.");
+        }
+
+        var servers = config
+            .GetSection("ConnectionStrings:servers")
+            .GetChildren()
+            .Select(s => s.Value)
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .ToArray();
+
+        var candidates = servers
+            .Concat(new[] { Environment.MachineName })
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var server in candidates)
+        {
+            var candidateBuilder = new SqlConnectionStringBuilder(baseBuilder.ConnectionString)
+            {
+                DataSource = server
+            };
+
+            if (CanConnectToDatabase(candidateBuilder, databaseName))
+            {
+                return candidateBuilder.ConnectionString;
+            }
+        }
+
+        throw new InvalidOperationException(
+            "Cannot find SQL Server instance containing database 'FUMiniHotelManagement'. " +
+            "Update ConnectionStrings:servers in appsettings.json or create the database from FUMiniHotelManagement.sql.");
+    }
+
+    private static bool CanConnectToDatabase(SqlConnectionStringBuilder builder, string databaseName)
+    {
+        try
+        {
+            using var connection = new SqlConnection(builder.ConnectionString);
+            connection.Open();
+
+            using var command = new SqlCommand("SELECT DB_ID(@dbName)", connection);
+            command.Parameters.AddWithValue("@dbName", databaseName);
+
+            var result = command.ExecuteScalar();
+            return result != DBNull.Value && result != null;
+        }
+        catch
+        {
+            return false;
+        }
     }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -81,9 +151,6 @@ public partial class FuminiHotelManagementContext : DbContext
             entity.HasIndex(e => e.EmailAddress, "UQ__Customer__49A147406DE9798A").IsUnique();
 
             entity.Property(e => e.CustomerId).HasColumnName("CustomerID");
-            entity.Property(e => e.Code)
-                .HasMaxLength(6)
-                .IsFixedLength();
             entity.Property(e => e.CustomerFullName).HasMaxLength(50);
             entity.Property(e => e.EmailAddress).HasMaxLength(50);
             entity.Property(e => e.Password).HasMaxLength(255);

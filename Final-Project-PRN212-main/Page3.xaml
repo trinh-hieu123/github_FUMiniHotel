@@ -69,9 +69,11 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"></ColumnDefinition>
                         <ColumnDefinition Width="*"></ColumnDefinition>
+                        <ColumnDefinition Width="*"></ColumnDefinition>
                     </Grid.ColumnDefinitions>
                     <Button Margin="5" Grid.Column="0" Height="30" Click="ButtonBase_OnClick">Refresh</Button>
                     <Button Margin="5" Grid.Column="1" Height="30" Click="ButtonBase_OnClickAdd">Add</Button>
+                    <Button Margin="5" Grid.Column="2" Height="30" Click="ButtonBase_OnClickUpdate">Update</Button>
                 </Grid>
                 <Grid>
                     <Grid.ColumnDefinitions>

@@ -78,80 +78,90 @@ namespace Question2
 
         private void ButtonBase_OnClickAdd(object sender, RoutedEventArgs e)
         {
-            var listEmail = MainWindow.INSTANCE.context.Customers.Where(x => x.EmailAddress == txtEmail.Text).ToList();
-            if (!string.IsNullOrWhiteSpace(txtId.Text)&&!string.IsNullOrWhiteSpace(txtEmail.Text))
+            if (string.IsNullOrWhiteSpace(txtEmail.Text))
             {
-                int id = int.Parse(txtId.Text);
-                var list = MainWindow.INSTANCE.context.Customers.Where(x => x.CustomerId == id).ToList();
-                
-                if (list.Count <= 0)
-                {
-                    if (listEmail.Count > 0)
-                    {
-                        MessageBox.Show("Input another email!", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                        return;
-                    }
-                    var customer = new Customer()
-                    {
-                        CustomerFullName = txtName.Text,
-                        Telephone = txtTelephone.Text,
-                        EmailAddress = txtEmail.Text,
-                        CustomerBirthday = DateOnly.Parse(dpDob.Text),
-                        CustomerStatus = active.IsChecked == true ? (byte)1 : (byte)0,
-                        BookingReservations = new List<BookingReservation>()
-                    };
-                    MainWindow.INSTANCE.context.Customers.Add(customer);
-                    MainWindow.INSTANCE.context.SaveChanges();
-                    Load();
-                    return;
-                }
-                else
-                {
-                    var result = MessageBox.Show("Customer is already exist. Do you want to proceed?", "Confirmation", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                    if (result == MessageBoxResult.Yes)
-                    {
-                        var customer = list.FirstOrDefault();
-                        customer.CustomerId = id;
-                        customer.CustomerFullName = txtName.Text;
-                        customer.Telephone = txtTelephone.Text;
-                        customer.EmailAddress = txtEmail.Text;
-                        customer.CustomerBirthday = DateOnly.Parse(dpDob.Text);
-                        customer.CustomerStatus = active.IsChecked == true ? (byte)1 : (byte)0;
-                        MainWindow.INSTANCE.context.Customers.Update(customer);
-                        MainWindow.INSTANCE.context.SaveChanges();
-                        Load();
-                        return;
-                    }
-                    else
-                    {
-                        return;
-                    }
-                }
-           
-            }
-            else
-            {
-                if (listEmail.Count > 0 || string.IsNullOrWhiteSpace(txtEmail.Text))
-                {
-                    MessageBox.Show("Input another email!", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
-                var customer = new Customer()
-                {
-                    CustomerFullName = txtName.Text,
-                    Telephone = txtTelephone.Text,
-                    EmailAddress = txtEmail.Text,
-                    CustomerBirthday = DateOnly.Parse(dpDob.Text),
-                    CustomerStatus = active.IsChecked == true ? (byte)1 : (byte)0,
-                    BookingReservations = new List<BookingReservation>()
-                };
-                MainWindow.INSTANCE.context.Customers.Add(customer);
-                MainWindow.INSTANCE.context.SaveChanges();
-                Load();
+                MessageBox.Show("Email cannot be blank!", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
+
+            if (!DateOnly.TryParse(dpDob.Text, out var dob))
+            {
+                MessageBox.Show("Date of birth is invalid!", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var emailExists = MainWindow.INSTANCE.context.Customers.Any(x => x.EmailAddress == txtEmail.Text);
+            if (emailExists)
+            {
+                MessageBox.Show("Input another email!", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var customer = new Customer()
+            {
+                CustomerFullName = txtName.Text,
+                Telephone = txtTelephone.Text,
+                EmailAddress = txtEmail.Text,
+                CustomerBirthday = dob,
+                CustomerStatus = active.IsChecked == true ? (byte)1 : (byte)0,
+                BookingReservations = new List<BookingReservation>()
+            };
+
+            MainWindow.INSTANCE.context.Customers.Add(customer);
+            MainWindow.INSTANCE.context.SaveChanges();
+            Load();
         }
 
+        private void ButtonBase_OnClickUpdate(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtId.Text))
+            {
+                MessageBox.Show("Please select a customer to update!", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            if (!int.TryParse(txtId.Text, out var id))
+            {
+                MessageBox.Show("Customer ID is invalid!", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var customer = MainWindow.INSTANCE.context.Customers.Find(id);
+            if (customer == null)
+            {
+                MessageBox.Show("Customer does not exist!");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(txtEmail.Text))
+            {
+                MessageBox.Show("Email cannot be blank!", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            if (!DateOnly.TryParse(dpDob.Text, out var dob))
+            {
+                MessageBox.Show("Date of birth is invalid!", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var duplicateEmail = MainWindow.INSTANCE.context.Customers
+                .Any(x => x.EmailAddress == txtEmail.Text && x.CustomerId != id);
+            if (duplicateEmail)
+            {
+                MessageBox.Show("Input another email!", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            customer.CustomerFullName = txtName.Text;
+            customer.Telephone = txtTelephone.Text;
+            customer.EmailAddress = txtEmail.Text;
+            customer.CustomerBirthday = dob;
+            customer.CustomerStatus = active.IsChecked == true ? (byte)1 : (byte)0;
+
+            MainWindow.INSTANCE.context.SaveChanges();
+            Load();
+        }
 
         private void ButtonBase_OnClickDel(object sender, RoutedEventArgs e)
         {
